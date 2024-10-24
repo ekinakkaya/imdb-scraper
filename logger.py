@@ -6,7 +6,7 @@ class Logger:
         logging.basicConfig(
             filename=filename,
             encoding="utf-8",
-            level=logging.DEBUG,
+            level=logging.INFO,
             format="%(asctime)s || %(levelname)s || %(name)s || %(funcName)s || %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
@@ -15,3 +15,17 @@ class Logger:
 
     def getLogger(self):
         return self.logger
+
+    def loggingLevels(self):
+        return {
+            "DEBUG": logging.DEBUG,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "ERROR": logging.ERROR,
+            "CRITICAL": logging.CRITICAL,
+        }
+
+    def setLevel(self, level):
+        self.logger.setLevel(level)
+
+    

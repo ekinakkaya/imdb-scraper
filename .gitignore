@@ -2,4 +2,7 @@
 
 *.log
 
-*.json
+# *.json 
+
+*.imdb_scraper.txt
+*.txt
