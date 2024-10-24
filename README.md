@@ -9,4 +9,4 @@ This is a web scraper for fetching ALL the movie information in the IMDb databas
 - [x] fix the unclickable button issues
 - [ ] there is no failsafe for being banned from the site. test this and evaluate
 - [ ] add session logic for unexpected closes, crashs, network issues, etc. so the program can keep scraping where it has left off
-- [ ] refactor the code a bit
+- [x] refactor the code a bit
