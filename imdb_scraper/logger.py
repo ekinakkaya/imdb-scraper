@@ -1,4 +1,5 @@
 # logger for writing log records to a file
+from imdb_scraper.config import LOG_FILE_FILEPATH
 import logging
 
 class Logger:
@@ -28,4 +29,4 @@ class Logger:
     def setLevel(self, level):
         self.logger.setLevel(level)
 
-    
+globalLoggerInstance = Logger(LOG_FILE_FILEPATH).getLogger()

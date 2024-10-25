@@ -1,77 +1,39 @@
-#from logger import Logger
+from imdb_scraper.logger import globalLoggerInstance
 
-from threading import Thread
-
-from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.keys import Keys
 
 import datetime
 import json
 import os
-import logging
 import time
 
-from imdb_scraper.logger import Logger
-from imdb_scraper.config import LOGGING_LEVEL
+from imdb_scraper.webdriver_manager import WebDriverManager
 
 class IMDBLinkScraper:
     root_search_url = "https://www.imdb.com/search/title/?"
 
     # we will add this to the link with the formatting: ?release_date=2024-10-03,2024-10-03
     release_date_query = "&release_date="
-
-    # the problem is that there are a lot of movies. for example there are 4,711 movies
-    # in the day of 01-01-2023 and 2,719,230 movies in the year 2023 alone
-    # so if we think about it, even if we only fetch the day 01-01-2023, there will be 4711 movies.
-    # and IMDb made the search page in a way that it only shows 50 of the movies initially
-    # and you have to click the "Show More" button to see 50 more movies. so we would need to click
-    # 4711 / 50 times which is 95 clicks. lets say if every click and fetch takes 5 seconds. 95 x 5 = 471 seconds.
-    # almost 8 minutes. for a day of movies. what? anyways we'll just test and see
-    
-    # what we will do is that we will first check every year individually and save the number of movies for that year
-    # then we will calculate how should we adjust the release date parameter
-
-    # if the year has > 500.000 movies, scraping mode will be DAY
-    # if the year has > 50.000 movies, scraping mode will be MONTH
-    # if the year has > 5.000 movies, scraping mode will be YEAR
-
     scraped_imdb_movie_links = []
-
     yearly_counts_file_path = "yearly_counts.json"
-
-    DRIVER_INITIATED = False
     
     def __init__(self):
-        self.logger = Logger("logs/imdb_link_scraper.log").getLogger()
-        self.logger.setLevel(LOGGING_LEVEL)
+        self.logger = globalLoggerInstance
         self.logger.info("starting IMDB Link scraper")
-        # we dont do this because we dont want to open a new browser every time we run the script
-        # we want to use the same browser instance
-        #self.init_driver()
+        self.driverManager = WebDriverManager()
 
-    def init_driver(self):
-        if self.DRIVER_INITIATED:
-            return
+    @property
+    def driver(self):
+        return self.driverManager.getDriver()
 
-        self.logger.info("initializing IMDb link scraper")
+    @driver.setter
+    def driver(self, driver):
+        self.driverManager.driver = driver
 
-        self.driver = webdriver.Chrome()
-        self.driver.wait = WebDriverWait(self.driver, 5)
-        self.logger.info("initialized IMDb link scraper with " + self.driver.name + " driver.")
-        self.DRIVER_INITIATED = True
-
-    def navigate(self, url):
-        self.init_driver()
-        self.driver.get(url)
-        self.logger.info("navigated to " + url)
 
     def create_search_query(self, start_date, end_date):
         return self.root_search_url + self.release_date_query + start_date + "," + end_date
+
 
     def read_yearly_movie_counts_file(self, filename):
         data_normalized = {}
@@ -88,6 +50,7 @@ class IMDBLinkScraper:
         
         return data_normalized
 
+
     def write_yearly_movie_counts_file(self, filename, updated_at: any, yearly_counts):
         today = datetime.datetime.now().strftime("%Y-%m-%d")
 
@@ -100,10 +63,11 @@ class IMDBLinkScraper:
             self.logger.info("writing the yearly movie counts to JSON file: " + filename + " with indent=2. updated_at=" + updated_at)
             json.dump(data_structured, file, indent=2)
 
+
     # from 1800 to this day, fetch how many movies are there in every year
     # this is for understanding the data and how we should proceed fetching it
     def fetch_yearly_movie_count(self, start_year: int, end_year: int):
-        self.init_driver()
+        self.driverManager.init_driver()
         # if a yearly_counts.json file exists and it is not older than 7 days, we just return the yearly_counts
 
         if (os.path.exists(self.yearly_counts_file_path)):
@@ -137,7 +101,7 @@ class IMDBLinkScraper:
 
             self.logger.info("fetching movie count for interval: " + start_date + " | " + end_date)
 
-            self.navigate(self.create_search_query(start_date, end_date))
+            self.driverManager.navigate(self.create_search_query(start_date, end_date))
             self.driver.implicitly_wait(10)
 
             movie_count_element_list = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/div[1]/div[1]")
@@ -163,17 +127,7 @@ class IMDBLinkScraper:
 
         self.driver.quit()
 
-        
-    # TODO: make a yearly movie count class inside this class
-    
-    # TODO: make a method that creates a scrape path. a scrape path will be a list of dates for the program to scrape while scraping the actual movies.
-    # explanation: the yearly_counts.json file contains the yearly counts.
-    # if the yearly count is > 500000, the scraping mode will be DAY.
-    # and the program will create a series of days for scraping. like:
-    # ["2024-01-01,2024-01-01", "2024-01-02,2024-01-02", ...]
-    # if it was monthly, it wwould be like this:
-    # ["2024-01-01,2024-01-31", "2024-02-01,2024-02-29"]
-    
+
     def create_scrape_path_from_yearly_counts(self, yearly_counts_filename=yearly_counts_file_path):
         data = self.read_yearly_movie_counts_file(yearly_counts_filename)
 
@@ -218,6 +172,7 @@ class IMDBLinkScraper:
         
         return scrape_path
 
+
     def write_scrape_path_to_json(self, scrape_path):
         data_structured = {
             "scrape_path_total_count": len(scrape_path),
@@ -231,6 +186,7 @@ class IMDBLinkScraper:
         with open("scrape_path.json", "w") as file:
             self.logger.info("writing the scrape path to JSON file: scrape_path.json")
             json.dump(data_structured, file, indent=2)
+
 
     def read_scrape_path_from_file(self, filename):
         with open(filename, "r") as file:
@@ -265,64 +221,13 @@ class IMDBLinkScraper:
                 movie_link = movie.get_attribute("href").split("?")[0]
                 file.write(movie_link + "\n")
 
+
     def scrape_movie_links_in_interval(self, start_date, end_date, movie_count):
         clicks_needed = int(movie_count / 50) + 1
         self.logger.info("we will click " + str(clicks_needed) + " times to get all the movies")
 
         # we click the see more button until it disappears
         count_fifty_more_clicked = 0
-        while True:
-            more_button_list = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/div[2]/div/span/button")
-            if len(more_button_list) == 0:
-                self.logger.info("could not found the 50 more button. we probably have all the movies now.")
-
-                # find all the movies in the page and get their links
-                # the xpath of a movie link:
-                # //*[@id="__next"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/ul/li[1]/div/div/div/div[1]/div[2]/div[1]/a
-                self.logger.info("finding all the movie links")
-                movies = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/ul/li/div/div/div/div[1]/div[2]/div[1]/a")
-                self.write_movie_links_to_file(start_date, end_date, movies)
-                break
-
-            else:
-                self.logger.info("found the '50 more' button. scrolling to it.")
-
-                element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
-                self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
-                time.sleep(1)
-
-                self.logger.info("clicking the '50 more' button")
-
-                # we should try scrolling and clicking in a loop until it succeeds with try catch
-                while True:
-                    try:
-                        # relocate the button before clicking. because when there are no more movies to show, the button just disappears and it still tries to click on it
-                        more_button_list = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/div[2]/div/span/button")
-                        if more_button_list == []:
-                            self.logger.info("could not found the 50 more button. we probably have all the movies now.")
-                            break
-
-                        more_button_list[0].click()
-
-                        time.sleep(1)
-                        self.driver.implicitly_wait(2)
-                        break
-                    except:
-                        self.logger.info("could not click the '50 more' button. scrolling to it.")
-                        element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
-                        self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
-                        time.sleep(2)
-                
-                count_fifty_more_clicked += 1
-                self.logger.info("clicked " + str(count_fifty_more_clicked) + " times. [" + str(count_fifty_more_clicked) + "/" + str(clicks_needed) + "] | {" + start_date + ", " + end_date + "}")
-    
-    def scrape_movie_links_in_interval_BETTER(self, start_date, end_date, movie_count):
-        clicks_needed = int(movie_count / 50) + 1
-        self.logger.info("we will click " + str(clicks_needed) + " times to get all the movies")
-
-        # we click the see more button until it disappears
-        count_fifty_more_clicked = 0
-
         
         # TODO: we are doing 2 loops here, in fact we can do this with just one. fix it
         while True:
@@ -331,44 +236,35 @@ class IMDBLinkScraper:
                 self.logger.info("could not found the 50 more button. we probably have all the movies now.")
 
                 # find all the movies in the page and get their links
-                # the xpath of a movie link:
-                # //*[@id="__next"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/ul/li[1]/div/div/div/div[1]/div[2]/div[1]/a
                 self.logger.info("finding all the movie links")
                 movies = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/ul/li/div/div/div/div[1]/div[2]/div[1]/a")
                 self.write_movie_links_to_file(start_date, end_date, movies)
                 break
 
             else:
-                self.logger.info("found the '50 more' button. scrolling to it.")
+                try:
+                    more_button_list = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/div[2]/div/span/button")
+                    if more_button_list == []:
+                        pass
 
-                element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
-                self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
-                time.sleep(1)
+                    element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
+                    self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
+                    time.sleep(1)
 
-                self.logger.info("clicking the '50 more' button")
+                    self.logger.info("clicking the '50 more' button")
+                    more_button_list[0].click()
 
-                # we should try scrolling and clicking in a loop until it succeeds with try catch
-                while True:
-                    try:
-                        # relocate the button before clicking. because when there are no more movies to show, the button just disappears and it still tries to click on it
-                        more_button_list = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/div[2]/div/span/button")
-                        if more_button_list == []:
-                            self.logger.info("could not found the 50 more button. we probably have all the movies now.")
-                            break
+                    count_fifty_more_clicked += 1
+                    self.logger.info("clicked " + str(count_fifty_more_clicked) + " times. [" + str(count_fifty_more_clicked) + "/" + str(clicks_needed) + "] | {" + start_date + ", " + end_date + "}")
 
-                        more_button_list[0].click()
-
-                        time.sleep(1)
-                        self.driver.implicitly_wait(2)
-                        break
-                    except:
-                        self.logger.info("could not click the '50 more' button. scrolling to it.")
-                        element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
-                        self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
-                        time.sleep(2)
+                    time.sleep(1)
+                    self.driver.implicitly_wait(2)
+                except:
+                    self.logger.info("could not click the '50 more' button. scrolling to it.")
+                    element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
+                    self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
+                    time.sleep(2)
                 
-                count_fifty_more_clicked += 1
-                self.logger.info("clicked " + str(count_fifty_more_clicked) + " times. [" + str(count_fifty_more_clicked) + "/" + str(clicks_needed) + "] | {" + start_date + ", " + end_date + "}")
         
     def find_movie_count_in_page(self, start_date, end_date):
         movie_count_element_list = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/div[1]/div[1]")
@@ -386,14 +282,15 @@ class IMDBLinkScraper:
         
         return movie_count
     
+    
     def scrape_movies_from_scrape_path(self, scrape_path_filename):
         scrape_path = self.read_scrape_path_from_file(scrape_path_filename)
-        self.init_driver()
+        self.driverManager.init_driver()
 
         for interval in scrape_path:
             self.logger.info("starting scraping movies from time interval: " + interval)
             start_date, end_date = interval.split(",")
-            self.navigate(self.create_search_query(start_date, end_date))
+            self.driverManager.navigate(self.create_search_query(start_date, end_date))
             self.driver.implicitly_wait(5)
             time.sleep(3)
 
@@ -402,9 +299,4 @@ class IMDBLinkScraper:
             movie_count: int = self.find_movie_count_in_page(start_date, end_date)
 
             if movie_count != 0:
-                #self.scrape_movie_links_in_interval(start_date, end_date, movie_count)
-                self.scrape_movie_links_in_interval_BETTER(start_date, end_date, movie_count)
-
-
-
- 
+                self.scrape_movie_links_in_interval(start_date, end_date, movie_count)
