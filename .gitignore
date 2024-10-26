@@ -6,3 +6,5 @@ __pycache__
 
 *.imdb_scraper.txt
 *.txt
+
+!requirements.txt

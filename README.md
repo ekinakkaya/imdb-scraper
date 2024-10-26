@@ -17,7 +17,8 @@ This is a web scraper for fetching ALL the movie information in the IMDb databas
 
 # bugs
 
-i got this mysterious error while testing, idk. i couldn't recreate it
+**i think i fixed it**
+~~i got this mysterious error while testing, idk. i couldn't recreate it~~
 
 ```
 PS C:\Users\ekin_\projeler\imdb-scraper> & C:/Python312/python.exe c:/Users/ekin_/projeler/imdb-scraper/main.py

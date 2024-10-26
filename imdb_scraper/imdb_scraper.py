@@ -1,6 +1,7 @@
 from imdb_scraper.logger import globalLoggerInstance
 
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import StaleElementReferenceException
 
 import datetime
 import json
@@ -21,6 +22,7 @@ class IMDBLinkScraper:
         self.logger = globalLoggerInstance
         self.logger.info("starting IMDB Link scraper")
         self.driverManager = WebDriverManager()
+        self.driver = None
 
     @property
     def driver(self):
@@ -259,6 +261,9 @@ class IMDBLinkScraper:
 
                     time.sleep(1)
                     self.driver.implicitly_wait(2)
+                except StaleElementReferenceException:
+                    self.logger.warning("stale element reference exception. Retrying...")
+                    time.sleep(2)
                 except:
                     self.logger.info("could not click the '50 more' button. scrolling to it.")
                     element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
@@ -290,7 +295,7 @@ class IMDBLinkScraper:
         for interval in scrape_path:
             self.logger.info("starting scraping movies from time interval: " + interval)
             start_date, end_date = interval.split(",")
-            self.driverManager.navigate(self.create_search_query(start_date, end_date))
+            self.driver.navigate(self.create_search_query(start_date, end_date))
             self.driver.implicitly_wait(5)
             time.sleep(3)
 

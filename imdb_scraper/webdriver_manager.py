@@ -1,5 +1,5 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
+from imdb_scraper.webdriver import CustomWebDriver
+
 from selenium.webdriver.support.ui import WebDriverWait
 
 from imdb_scraper.logger import globalLoggerInstance
@@ -19,15 +19,10 @@ class WebDriverManager:
             return
 
         self.logger.info("initializing selenium webdriver.")
-        self.driver = webdriver.Chrome()
+        self.driver = CustomWebDriver()
         self.driver.wait = WebDriverWait(self.driver, 5)
             
         self.logger.info("initialized selenium webdriver with " + self.driver.name + " driver.")
         self.DRIVER_INITIATED = True
 
         return self.driver
-
-    def navigate(self, url):
-        self.init_driver()
-        self.driver.get(url)
-        self.logger.info("navigated to " + url)
