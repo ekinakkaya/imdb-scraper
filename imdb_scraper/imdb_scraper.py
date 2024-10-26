@@ -11,9 +11,9 @@ import time
 from imdb_scraper.webdriver_manager import WebDriverManager
 
 class IMDBLinkScraper:
-    root_search_url = "https://www.imdb.com/search/title/?"
+    root_search_url = "https://www.imdb.com/search/title/?title_type=feature"
 
-    # we will add this to the link with the formatting: ?release_date=2024-10-03,2024-10-03
+    # we will add this to the link with the formatting: &release_date=2024-10-03,2024-10-03
     release_date_query = "&release_date="
     scraped_imdb_movie_links = []
     yearly_counts_file_path = "yearly_counts.json"
