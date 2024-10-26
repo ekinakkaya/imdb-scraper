@@ -53,7 +53,7 @@ class IMDBLinkScraper:
         return data_normalized
 
 
-    def write_yearly_movie_counts_file(self, filename, updated_at: any, yearly_counts):
+    def write_yearly_movie_counts_file(self, filename, yearly_counts):
         today = datetime.datetime.now().strftime("%Y-%m-%d")
 
         data_structured = {
@@ -62,7 +62,7 @@ class IMDBLinkScraper:
         }
 
         with open(filename, "w") as file:
-            self.logger.info("writing the yearly movie counts to JSON file: " + filename + " with indent=2. updated_at=" + updated_at)
+            self.logger.info("writing the yearly movie counts to JSON file: " + filename + " with indent=2. updated_at=" + today)
             json.dump(data_structured, file, indent=2)
 
 
@@ -103,16 +103,16 @@ class IMDBLinkScraper:
 
             self.logger.info("fetching movie count for interval: " + start_date + " | " + end_date)
 
-            self.driverManager.navigate(self.create_search_query(start_date, end_date))
+            self.driver.navigate(self.create_search_query(start_date, end_date))
             self.driver.implicitly_wait(10)
 
             movie_count_element_list = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/div[1]/div[1]")
             if (movie_count_element_list != []):
-                movie_count_text: str = movie_count[0].text
+                movie_count_text: str = str(movie_count_element_list[0].text)
                 if movie_count_text == "":
                     movie_count = 0
                 else:
-                    movie_count = int(movie_count.split("of ")[1].replace(",", ""))
+                    movie_count = int(movie_count_text.split("of ")[1].replace(",", ""))
                 
                 print("movie count for year " + str(year) + ": " + str(movie_count))
                 self.logger.info("found movie count for interval: " + start_date + " | " + end_date + " is " + str(movie_count))
@@ -136,7 +136,7 @@ class IMDBLinkScraper:
         scrape_path = []
         
         for year in data["yearly_counts"]:
-            if data["yearly_counts"][year] > 500000:
+            if data["yearly_counts"][year] > 100000:
                 print("the year " + year + " should be scraped daily")
 
                 start_date = datetime.datetime(int(year), 1, 1)
@@ -150,7 +150,7 @@ class IMDBLinkScraper:
                     scrape_path.append(day + "," + day)
                     current_date = next_date
 
-            elif data["yearly_counts"][year] > 50000:
+            elif data["yearly_counts"][year] > 10000:
                 print("the year " + year + " should be scraped monthly")
 
                 for month in range(1, 13):
@@ -247,20 +247,21 @@ class IMDBLinkScraper:
                 try:
                     more_button_list = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/div[2]/div/span/button")
                     if more_button_list == []:
+                        time.sleep(1)
                         pass
+                    else:
+                        element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
+                        self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
+                        time.sleep(1)
 
-                    element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
-                    self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
-                    time.sleep(1)
+                        self.logger.info("clicking the '50 more' button")
+                        more_button_list[0].click()
 
-                    self.logger.info("clicking the '50 more' button")
-                    more_button_list[0].click()
+                        count_fifty_more_clicked += 1
+                        self.logger.info("clicked " + str(count_fifty_more_clicked) + " times. [" + str(count_fifty_more_clicked) + "/" + str(clicks_needed) + "] | {" + start_date + ", " + end_date + "}")
 
-                    count_fifty_more_clicked += 1
-                    self.logger.info("clicked " + str(count_fifty_more_clicked) + " times. [" + str(count_fifty_more_clicked) + "/" + str(clicks_needed) + "] | {" + start_date + ", " + end_date + "}")
-
-                    time.sleep(1)
-                    self.driver.implicitly_wait(2)
+                        time.sleep(1)
+                        self.driver.implicitly_wait(2)
                 except StaleElementReferenceException:
                     self.logger.warning("stale element reference exception. Retrying...")
                     time.sleep(2)

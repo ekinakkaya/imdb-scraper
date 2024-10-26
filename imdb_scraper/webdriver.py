@@ -8,14 +8,14 @@ class CustomWebDriver(webdriver.Chrome):
         self.logger = globalLoggerInstance
         
         options = webdriver.ChromeOptions()
-        options.add_argument("--disable-blink-features=AutomationControlled")  # Avoid detection
-        options.add_argument("--no-sandbox")  # Useful in some environments
-        options.add_argument("--disable-dev-shm-usage")  # Prevent memory issues
-        options.add_argument("--disable-extensions")  # Disable extensions
-        options.add_argument("--disable-infobars")  # Disable info bars
-        options.add_argument("--disable-notifications")  # Disable notifications
-        options.add_argument("--disable-popup-blocking")  # Disable popup blocking
-        options.add_argument("--disable-translate")  # Disable translation
+        #options.add_argument("--disable-blink-features=AutomationControlled")  # Avoid detection
+        #options.add_argument("--no-sandbox")  # Useful in some environments
+        #options.add_argument("--disable-dev-shm-usage")  # Prevent memory issues
+        #options.add_argument("--disable-extensions")  # Disable extensions
+        #options.add_argument("--disable-infobars")  # Disable info bars
+        #options.add_argument("--disable-notifications")  # Disable notifications
+        #options.add_argument("--disable-popup-blocking")  # Disable popup blocking
+        #options.add_argument("--disable-translate")  # Disable translation
 
         super().__init__(options=options, *args, **kwargs)
          
