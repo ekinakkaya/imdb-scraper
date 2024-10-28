@@ -9,20 +9,22 @@ import os
 import time
 
 from imdb_scraper.webdriver_manager import WebDriverManager
-
+from imdb_scraper.session_manager import SessionManager
 class IMDBLinkScraper:
     root_search_url = "https://www.imdb.com/search/title/?title_type=feature"
 
     # we will add this to the link with the formatting: &release_date=2024-10-03,2024-10-03
     release_date_query = "&release_date="
-    scraped_imdb_movie_links = []
     yearly_counts_file_path = "yearly_counts.json"
+    movie_links_folder = "movie_links"
     
     def __init__(self):
         self.logger = globalLoggerInstance
         self.logger.info("starting IMDB Link scraper")
         self.driverManager = WebDriverManager()
         self.driver = None
+
+        self.session = SessionManager(".session.json")
 
     @property
     def driver(self):
@@ -217,7 +219,7 @@ class IMDBLinkScraper:
         
         
     def write_movie_links_to_file(self, start_date, end_date, movies):
-        with open(str(start_date) + "_" + str(end_date) + "_" + datetime.datetime.now().strftime("%d-%m-%Y_%H-%M-%S") + ".imdb_scraper.txt", "a") as file:
+        with open(self.movie_links_folder + "/" + str(start_date) + "_" + str(end_date) + "_" + datetime.datetime.now().strftime("%d-%m-%Y_%H-%M-%S") + ".imdb_scraper.txt", "a") as file:
             for movie in movies:
                 # remove the ?ref_=sr_t_1 stuff
                 movie_link = movie.get_attribute("href").split("?")[0]
@@ -225,13 +227,17 @@ class IMDBLinkScraper:
 
 
     def scrape_movie_links_in_interval(self, start_date, end_date, movie_count):
+        if movie_count == 0:
+            self.logger.info("there are no movies in the interval " + start_date + " | " + end_date)
+            return
+
+        self.logger.info("found " + str(movie_count) + " movies in the interval " + start_date + " | " + end_date)
         clicks_needed = int(movie_count / 50) + 1
         self.logger.info("we will click " + str(clicks_needed) + " times to get all the movies")
 
         # we click the see more button until it disappears
         count_fifty_more_clicked = 0
         
-        # TODO: we are doing 2 loops here, in fact we can do this with just one. fix it
         while True:
             more_button_list = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/div[2]/div/span/button")
             if len(more_button_list) == 0:

@@ -9,11 +9,17 @@ This is a web scraper for fetching ALL the movie information in the IMDb databas
 - [x] fix the unclickable button issues
 - [x] refactor the code a bit
 - [x] web driver manager
-- [ ] properly handle where will links be saved and in what format.
+- [x] properly handle where will links be saved and in what format.
+- [x] session manager
+- [ ] rewrite tests with unittest
+- [ ] finish session manager
+- [ ] implement session manager in scraper
+- [ ] make tests
+- [x] make tests for session manager
+- [ ] progress bar
 - [ ] there is no failsafe for being banned from the site. test this and evaluate
 - [ ] add session logic for unexpected closes, crashs, network issues, etc. so the program can keep scraping where it has left off
 - [ ] webpage manager
-- [ ] session manager
 
 # bugs
 

@@ -5,9 +5,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from imdb_scraper.logger import globalLoggerInstance
 
 class WebDriverManager:
-    DRIVER_INITIATED = False
 
     def __init__(self):
+        self.DRIVER_INITIATED = False
+        
         self.driver = None
         self.logger = globalLoggerInstance
 
