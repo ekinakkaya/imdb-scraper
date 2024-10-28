@@ -58,6 +58,20 @@ class SessionManager:
         self.logger.info("new session has been created and saved to sessions file.")
         return session
 
+
+    def finish_session(self, session_id):
+        session = self.get_session(session_id)
+
+        if session != None:
+            session["session_end_time"] = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+            
+            for i in range(len(self.sessions)):
+                if self.sessions[i]["session_id"] == session_id:
+                    self.sessions[i] = session
+
+            self.update_sessions_file()
+
+
     def get_session(self, id):
         for session in self.sessions:
             #print("comparing " + id + " | " + session["session_id"])

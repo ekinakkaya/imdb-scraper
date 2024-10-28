@@ -78,8 +78,9 @@ class AddAndFinishJobsTest:
                 job_id = self.session_manager.add_job_to_session(session["session_id"], "link_scraping", "2000-01-01,2001-01-01")
                 job = self.session_manager.get_job(session["session_id"], job_id)
                 self.session_manager.finish_job(session["session_id"], job_id)
-                job = self.session_manager.get_job(session["session_id"], job_id)
-                print(job)
+                #job = self.session_manager.get_job(session["session_id"], job_id)
+                
+                self.session_manager.finish_session(session["session_id"])
 
                 if job != None and job["job_type"] == "link_scraping" and job["job_end_time"] != None:
                     return True
@@ -94,7 +95,7 @@ if __name__ == "__main__":
     test_results.append(AddJobsTest().test())
     test_results.append(AddAndFinishJobsTest().test())
     
-    os.remove(SESSIONS_FILE)
+    #os.remove(SESSIONS_FILE)
 
     for i in range(len(test_results)):
         print("test " + str(i) + " " + str(test_results[i]))

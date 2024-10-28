@@ -1,3 +1,4 @@
+import uuid
 from imdb_scraper.logger import globalLoggerInstance
 
 from selenium.webdriver.common.by import By
@@ -10,6 +11,8 @@ import time
 
 from imdb_scraper.webdriver_manager import WebDriverManager
 from imdb_scraper.session_manager import SessionManager
+
+from imdb_scraper.config import SCRAPE_PATHS_FOLDER
 class IMDBLinkScraper:
     root_search_url = "https://www.imdb.com/search/title/?title_type=feature"
 
@@ -187,8 +190,10 @@ class IMDBLinkScraper:
         for i in range(len(scrape_path)):
             data_structured["scrape_path_entries"][i] = scrape_path[i]
 
-        with open("scrape_path.json", "w") as file:
-            self.logger.info("writing the scrape path to JSON file: scrape_path.json")
+        scrape_path_uuid = uuid.uuid4()
+        scrape_path_file_path = SCRAPE_PATHS_FOLDER + "/scrape_path-" + scrape_path_uuid + ".json"
+        with open(scrape_path_file_path, "w") as file:
+            self.logger.info("writing the scrape path to JSON file: " + scrape_path_file_path)
             json.dump(data_structured, file, indent=2)
 
 
