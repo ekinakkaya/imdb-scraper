@@ -10,7 +10,6 @@ import os
 import time
 
 from imdb_scraper.webdriver_manager import WebDriverManager
-from imdb_scraper.session_manager import SessionManager
 
 from imdb_scraper.config import SCRAPE_PATHS_FOLDER
 class IMDBLinkScraper:
@@ -26,8 +25,6 @@ class IMDBLinkScraper:
         self.logger.info("starting IMDB Link scraper")
         self.driverManager = WebDriverManager()
         self.driver = None
-
-        self.session = SessionManager(".session.json")
 
     @property
     def driver(self):
@@ -180,18 +177,24 @@ class IMDBLinkScraper:
         return scrape_path
 
 
-    def write_scrape_path_to_json(self, scrape_path):
+    def write_scrape_path_to_json(self, scrape_path, scraped_intervals = [], scrape_path_filepath: str = None):
         data_structured = {
-            "scrape_path_total_count": len(scrape_path),
-            "scrape_path_entries": {
-            }
+            "scrape_path_entries": [],
+            "scraped_intervals": []
         }
 
-        for i in range(len(scrape_path)):
-            data_structured["scrape_path_entries"][i] = scrape_path[i]
+        for interval in scrape_path:
+            data_structured["scrape_path_entries"].append(interval)
 
-        scrape_path_uuid = uuid.uuid4()
-        scrape_path_file_path = SCRAPE_PATHS_FOLDER + "/scrape_path-" + scrape_path_uuid + ".json"
+        for interval in scraped_intervals:
+            data_structured["scraped_intervals"].append(interval)
+
+        if scrape_path_filepath == None:
+            scrape_path_uuid = str(uuid.uuid4())
+            scrape_path_file_path = SCRAPE_PATHS_FOLDER + "/scrape_path-" + scrape_path_uuid + ".json"
+        else:
+            scrape_path_file_path = scrape_path_filepath
+
         with open(scrape_path_file_path, "w") as file:
             self.logger.info("writing the scrape path to JSON file: " + scrape_path_file_path)
             json.dump(data_structured, file, indent=2)
@@ -202,10 +205,15 @@ class IMDBLinkScraper:
             data = json.load(file)
             
             scrape_path = []
+            already_scraped_intervals = []
             
-            for i in range(data["scrape_path_total_count"]):
-                scrape_path.append(data["scrape_path_entries"][str(i)])
-            return scrape_path
+            for interval in data["scrape_path_entries"]:
+                scrape_path.append(interval)
+
+            for interval in data["scraped_intervals"]:
+                already_scraped_intervals.append(interval)
+            
+            return scrape_path, already_scraped_intervals
 
         return []
         
@@ -231,6 +239,23 @@ class IMDBLinkScraper:
                 file.write(movie_link + "\n")
 
 
+    def change_interval_to_finished_in_scrape_path_file(self, interval, scrape_path_filepath):
+        scrape_path_old, already_scraped_old = self.read_scrape_path_from_file(scrape_path_filepath)
+
+        already_scraped_old.append(interval)
+        scrape_path_old.remove(interval)
+
+        self.write_scrape_path_to_json(scrape_path=scrape_path_old, scraped_intervals=already_scraped_old, scrape_path_filepath=scrape_path_filepath)
+
+        #scrape_path_local = scrape_path[:]
+        #already_scraped_local = already_scraped[:]
+
+        #already_scraped_local.append(interval)
+        #scrape_path_local.remove(interval)
+
+        #self.write_scrape_path_to_json(scrape_path=scrape_path_local, scraped_intervals=already_scraped_local, scrape_path_filepath=scrape_path_filepath)
+        
+
     def scrape_movie_links_in_interval(self, start_date, end_date, movie_count):
         if movie_count == 0:
             self.logger.info("there are no movies in the interval " + start_date + " | " + end_date)
@@ -252,6 +277,7 @@ class IMDBLinkScraper:
                 self.logger.info("finding all the movie links")
                 movies = self.driver.find_elements(by=By.XPATH, value="//*[@id=\"__next\"]/main/div[2]/div[3]/section/section/div/section/section/div[2]/div/section/div[2]/div[2]/ul/li/div/div/div/div[1]/div[2]/div[1]/a")
                 self.write_movie_links_to_file(start_date, end_date, movies)
+                
                 break
 
             else:
@@ -265,11 +291,11 @@ class IMDBLinkScraper:
                         self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
                         time.sleep(1)
 
-                        self.logger.info("clicking the '50 more' button")
+                        self.logger.debug("clicking the '50 more' button")
                         more_button_list[0].click()
 
                         count_fifty_more_clicked += 1
-                        self.logger.info("clicked " + str(count_fifty_more_clicked) + " times. [" + str(count_fifty_more_clicked) + "/" + str(clicks_needed) + "] | {" + start_date + ", " + end_date + "}")
+                        self.logger.debug("clicked " + str(count_fifty_more_clicked) + " times. [" + str(count_fifty_more_clicked) + "/" + str(clicks_needed) + "] | {" + start_date + ", " + end_date + "}")
 
                         time.sleep(1)
                         self.driver.implicitly_wait(2)
@@ -277,7 +303,7 @@ class IMDBLinkScraper:
                     self.logger.warning("stale element reference exception. Retrying...")
                     time.sleep(2)
                 except:
-                    self.logger.info("could not click the '50 more' button. scrolling to it.")
+                    self.logger.debug("could not click the '50 more' button. scrolling to it.")
                     element_position = self.driver.execute_script("return arguments[0].getBoundingClientRect().top;", more_button_list[0])
                     self.driver.execute_script("window.scrollBy(0, arguments[0] - 200);", element_position)
                     time.sleep(2)
@@ -299,9 +325,8 @@ class IMDBLinkScraper:
         
         return movie_count
     
-    
-    def scrape_movies_from_scrape_path(self, scrape_path_filename):
-        scrape_path = self.read_scrape_path_from_file(scrape_path_filename)
+    def scrape_movies_from_scrape_path(self, scrape_path_filepath):
+        scrape_path, already_scraped = self.read_scrape_path_from_file(scrape_path_filepath)
         self.driverManager.init_driver()
 
         for interval in scrape_path:
@@ -317,3 +342,7 @@ class IMDBLinkScraper:
 
             if movie_count != 0:
                 self.scrape_movie_links_in_interval(start_date, end_date, movie_count)
+            
+            self.change_interval_to_finished_in_scrape_path_file(interval, scrape_path_filepath)
+
+            self.logger.info("finished scraping interval: " + interval)

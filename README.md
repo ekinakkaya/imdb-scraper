@@ -10,7 +10,7 @@ This is a web scraper for fetching ALL the movie information in the IMDb databas
 - [x] refactor the code a bit
 - [x] web driver manager
 - [x] properly handle where will links be saved and in what format.
-- [ ] make it keep going where it left off by tracking movie_links and scrape_path
+- [x] make it keep going where it left off by tracking movie_links and scrape_path
 - [ ] make tests
 - [ ] progress bar
 - [ ] there is no failsafe for being banned from the site. test this and evaluate
