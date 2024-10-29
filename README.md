@@ -10,16 +10,13 @@ This is a web scraper for fetching ALL the movie information in the IMDb databas
 - [x] refactor the code a bit
 - [x] web driver manager
 - [x] properly handle where will links be saved and in what format.
-- [x] session manager
-- [ ] rewrite tests with unittest
-- [ ] finish session manager
-- [ ] implement session manager in scraper
+- [ ] make it keep going where it left off by tracking movie_links and scrape_path
 - [ ] make tests
-- [x] make tests for session manager
 - [ ] progress bar
 - [ ] there is no failsafe for being banned from the site. test this and evaluate
 - [ ] add session logic for unexpected closes, crashs, network issues, etc. so the program can keep scraping where it has left off
 - [ ] webpage manager
 - [ ] implement movie data scraper
+- [x] ~~session manager~~
 
 # bugs
