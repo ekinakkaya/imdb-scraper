@@ -1,6 +1,8 @@
+import csv
 import os
 import time
 import requests
+import uuid
 from bs4 import BeautifulSoup
 from lxml import etree 
 from fake_useragent import UserAgent
@@ -11,7 +13,13 @@ class MovieDataScraper:
     
     def __init__(self) -> None:
         self.user_agent = UserAgent()
-        pass
+
+        self.csv_file = f"./csv_files/{uuid.uuid4()}.csv"
+        self.data_headers = ["name", "description", "duration", "imdb_rating", "metascore", "directors", "writers", "stars"]
+
+        with open(self.csv_file, mode="w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=self.data_headers)
+            writer.writeheader()
 
 
     def read_all_files_in_directory(self, directory_path):
@@ -37,6 +45,12 @@ class MovieDataScraper:
             else:
                 print("network error. response status code: " + response.status_code)
                 time.sleep(10)
+    
+    
+    def write_movie_data_to_csv(self, movie_data):
+        with open(self.csv_file, mode="a", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=self.data_headers)
+            writer.writerow(movie_data)
 
 
     def scrape_movie_data_from_file(self, filepath):
@@ -44,6 +58,7 @@ class MovieDataScraper:
             lines = [line.strip() for line in file.readlines()]
 
             for url in lines:
+                print(url)
                 page = self.get_page(url)
 
                 soup = BeautifulSoup(page.content, "html.parser")
@@ -58,28 +73,32 @@ class MovieDataScraper:
                 movie_description = dom.xpath(movie_description_xpath)[0].text
 
                 movie_duration_xpath = "//*[@id=\"__next\"]/main/div/section[1]/section/div[3]/section/section/div[2]/div[1]/ul/li[3]"
-                movie_duration = dom.xpath(movie_duration_xpath)[0].text
+                try:
+                    movie_duration = dom.xpath(movie_duration_xpath)[0].text
+                except IndexError:
+                    movie_duration = "N/A"
+                    
 
                 movie_imdb_rating_xpath = "//*[@id=\"__next\"]/main/div/section[1]/section/div[3]/section/section/div[2]/div[2]/div/div[1]/a/span/div/div[2]/div[1]/span[1]"
                 movie_imdb_rating = dom.xpath(movie_imdb_rating_xpath)[0].text
 
                 movie_metascore_xpath = "//*[@id=\"__next\"]/main/div/section[1]/section/div[3]/section/section/div[3]/div[2]/div[2]/ul/li[3]/a/span/span[1]/span"
-                movie_metascore = dom.xpath(movie_metascore_xpath)[0].text
+                try:
+                    movie_metascore = dom.xpath(movie_metascore_xpath)[0].text
+                except:
+                    movie_metascore = "N/A"
 
                 movie_directors_list_xpath = "//*[@id=\"__next\"]/main/div/section[1]/section/div[3]/section/section/div[3]/div[2]/div[1]/section/div[2]/div/ul/li[1]/div/ul"
                 movie_directors_list = dom.xpath(movie_directors_list_xpath)[0]
-                for director_element in movie_directors_list:
-                    print("director: " + director_element[0].text)
+                directors = [director[0].text for director in movie_directors_list]
 
                 movie_writers_list_xpath = "//*[@id=\"__next\"]/main/div/section[1]/section/div[3]/section/section/div[3]/div[2]/div[1]/section/div[2]/div/ul/li[2]/div/ul"
                 movie_writers_list = dom.xpath(movie_writers_list_xpath)[0]
-                for writer_element in movie_writers_list:
-                    print("writer: " + writer_element[0].text)
+                writers = [writer[0].text for writer in movie_writers_list]
 
                 movie_stars_list_xpath = "//*[@id=\"__next\"]/main/div/section[1]/section/div[3]/section/section/div[3]/div[2]/div[1]/section/div[2]/div/ul/li[3]/div/ul"
                 movie_stars_list = dom.xpath(movie_stars_list_xpath)[0]
-                for star_element in movie_stars_list:
-                    print("star: " + star_element[0].text)
+                stars = [star[0].text for star in movie_stars_list]
 
                 #movie_genres_list_xpath = "//*[@id=\"__next\"]/main/div/section[1]/div/section/div/div[1]/section[6]/div[2]/ul[2]/li[1]/div/ul"
                 #movie_genres_list = dom.xpath(movie_genres_list_xpath)[0]
@@ -96,12 +115,13 @@ class MovieDataScraper:
                     "duration": movie_duration,
                     "imdb_rating": movie_imdb_rating,
                     "metascore": movie_metascore,
-                    "directors": [director.text for director in movie_directors_list],
-                    "writers": [writer.text for writer in movie_writers_list],
-                    "stars": [star.text for star in movie_stars_list],
+                    "directors": directors,
+                    "writers": writers,
+                    "stars": stars
                 }
 
-                time.sleep(100)
+                self.write_movie_data_to_csv(movie_data)
+
 
 
 
@@ -110,6 +130,7 @@ class MovieDataScraper:
         files = self.read_all_files_in_directory(directory_path)
 
         for file in files:
+            print(file)
             self.scrape_movie_data_from_file(os.path.join(directory_path, file))
 
         pass
