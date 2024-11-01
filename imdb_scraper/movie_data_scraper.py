@@ -22,6 +22,7 @@ class MovieDataScraper:
             writer.writeheader()
 
 
+
     def read_all_files_in_directory(self, directory_path):
         return [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))]
 
